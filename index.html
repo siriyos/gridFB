@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="FB 5-Grid">
+<title>FB 5-Photo Grid Cutter</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;background:#0a0a0a;color:#f0f0f0;font-family:-apple-system,sans-serif}
+body{display:flex;flex-direction:column;align-items:center;padding:24px 16px 48px}
+.wrap{width:100%;max-width:440px}
+
+.header{text-align:center;margin-bottom:20px}
+.header-label{font-size:11px;letter-spacing:4px;color:#555;text-transform:uppercase;margin-bottom:5px}
+.header-title{font-size:28px;font-weight:700;letter-spacing:-.5px}
+.header-sub{font-size:11px;color:#555;margin-top:3px;min-height:16px}
+
+.diagram{background:#111;border-radius:10px;padding:10px;margin-bottom:16px}
+.diagram-label{font-size:10px;color:#444;text-align:center;margin-bottom:8px}
+.diagram-row{display:flex;gap:2px;margin-bottom:2px}
+.diagram-cell{flex:1;border-radius:4px;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-weight:700}
+
+.dropzone{border:1.5px dashed #333;border-radius:14px;padding:52px 24px;text-align:center;cursor:pointer;background:#111}
+.dropzone-icon{font-size:40px;margin-bottom:12px}
+.dropzone-t1{font-size:16px;font-weight:600;margin-bottom:4px}
+.dropzone-t2{font-size:11px;color:#555}
+
+#cropWrap{position:relative;margin:0 auto 14px;border-radius:8px;overflow:hidden;background:#111;touch-action:none;cursor:move}
+#cropWrap img{display:block;width:100%;height:100%;object-fit:fill}
+.dim{position:absolute;background:rgba(0,0,0,.6);pointer-events:none}
+#cropBox{position:absolute;border:2px solid #f33;pointer-events:none}
+.gl{position:absolute;background:rgba(255,51,51,.4);pointer-events:none}
+.glb{position:absolute;background:rgba(255,51,51,.7);pointer-events:none}
+.corner{position:absolute;width:14px;height:14px;pointer-events:none}
+
+.slider-wrap{background:#111;border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.slider-label{font-size:11px;color:#666;margin-bottom:8px}
+input[type=range]{width:100%;accent-color:#f33}
+
+.btn-row{display:flex;gap:10px;margin-bottom:14px}
+button{flex:1;padding:13px 0;border-radius:10px;font-size:14px;font-weight:600;
+  cursor:pointer;font-family:inherit;border:1.5px solid #444;background:#1a1a1a;color:#f0f0f0;-webkit-appearance:none}
+.btn-white{background:#fff;border-color:#fff;color:#000}
+.btn-red{background:#f33;border-color:#f33;color:#fff}
+
+.preview-wrap{background:#111;border-radius:12px;padding:8px;margin-bottom:14px}
+.preview-label{font-size:10px;color:#444;text-align:center;margin-bottom:6px}
+.preview-row{display:flex;gap:2px;margin-bottom:2px}
+.preview-cell{flex:1;aspect-ratio:1;overflow:hidden;border-radius:4px;cursor:pointer}
+.preview-cell img{width:100%;height:100%;object-fit:cover;display:block}
+
+.tile-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.tile-item{display:flex;align-items:center;gap:10px;background:#111;border-radius:8px;padding:8px 12px;cursor:pointer}
+.tile-thumb{width:46px;height:46px;object-fit:cover;border-radius:5px}
+.tile-name{font-size:13px;font-weight:600}
+.tile-size{font-size:9px;color:#555}
+.tile-dl{font-size:16px;color:#555}
+
+#fileInput{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="header-label">Facebook</div>
+    <div class="header-title">5-Photo Grid</div>
+    <div class="header-sub" id="sub">ตัดภาพเดียวเป็น 5 ช่องพอดี FB layout</div>
+  </div>
+
+  <div class="diagram">
+    <div class="diagram-label">layout ที่ FB จะแสดง</div>
+    <div class="diagram-row">
+      <div class="diagram-cell" style="height:80px;font-size:18px;color:#4caf50">①</div>
+      <div class="diagram-cell" style="height:80px;font-size:18px;color:#4a8fd4">②</div>
+    </div>
+    <div class="diagram-row">
+      <div class="diagram-cell" style="height:53px;font-size:15px;color:#d47a4a">③</div>
+      <div class="diagram-cell" style="height:53px;font-size:15px;color:#a04ad4">④</div>
+      <div class="diagram-cell" style="height:53px;font-size:15px;color:#4acfcf">⑤</div>
+    </div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div id="sUpload">
+    <label class="dropzone">
+      <div class="dropzone-icon">🖼️</div>
+      <div class="dropzone-t1">แตะเพื่อเลือกรูป</div>
+      <div class="dropzone-t2">รูปอะไรก็ได้ — จะตัดเป็น 5 ช่องให้</div>
+      <input id="fileInput" type="file" accept="image/*" onchange="loadFile(this)">
+    </label>
+  </div>
+
+  <!-- CROP -->
+  <div id="sCrop" style="display:none">
+    <div id="cropWrap">
+      <img id="cropImg" src="">
+      <div class="dim" id="dT"></div>
+      <div class="dim" id="dB"></div>
+      <div class="dim" id="dL"></div>
+      <div class="dim" id="dR"></div>
+      <div id="cropBox">
+        <!-- center guides -->
+        <div class="gl" style="top:50%;left:0;width:100%;height:1px"></div>
+        <div class="gl" style="left:50%;top:0;height:100%;width:1px"></div>
+        <!-- FB grid lines -->
+        <div class="glb" id="hLine"></div>
+        <div class="glb" id="v1"></div>
+        <div class="glb" id="v2"></div>
+        <div class="glb" id="v3"></div>
+        <!-- corners -->
+        <div class="corner" style="top:-1px;left:-1px;border-top:3px solid #f33;border-left:3px solid #f33"></div>
+        <div class="corner" style="top:-1px;right:-1px;border-top:3px solid #f33;border-right:3px solid #f33"></div>
+        <div class="corner" style="bottom:-1px;left:-1px;border-bottom:3px solid #f33;border-left:3px solid #f33"></div>
+        <div class="corner" style="bottom:-1px;right:-1px;border-bottom:3px solid #f33;border-right:3px solid #f33"></div>
+      </div>
+    </div>
+    <div class="slider-wrap">
+      <div class="slider-label" id="sliderLbl">ขนาด: 100%</div>
+      <input type="range" id="slider" min="20" max="100" value="100" oninput="onSlider(this.value)">
+    </div>
+    <div class="btn-row">
+      <button onclick="goUpload()">← กลับ</button>
+      <button class="btn-red" onclick="cut()">✂️ Confirm &amp; Cut</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="sResult" style="display:none">
+    <div class="preview-wrap">
+      <div class="preview-label">ตัวอย่างแสดงผลบน FB</div>
+      <div class="preview-row" id="prevTop"></div>
+      <div class="preview-row" id="prevBot"></div>
+    </div>
+    <div class="tile-list" id="tileList"></div>
+    <div class="btn-row">
+      <button onclick="goUpload()">รูปใหม่</button>
+      <button class="btn-white" onclick="dlAll()">⬇️ โหลดทั้ง 5</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CW=1080,CH=1080;
+const TOP_H=Math.round(CH*245/408); // 649
+const BOT_H=CH-TOP_H;               // 431
+const HALF=CW/2;
+const THIRD=Math.floor(CW/3);
+const SLOTS=[
+  {sx:0,      sy:0,     sw:HALF,       sh:TOP_H,label:"①บนซ้าย"},
+  {sx:HALF,   sy:0,     sw:HALF,       sh:TOP_H,label:"②บนขวา"},
+  {sx:0,      sy:TOP_H, sw:THIRD,      sh:BOT_H,label:"③ล่างซ้าย"},
+  {sx:THIRD,  sy:TOP_H, sw:THIRD,      sh:BOT_H,label:"④ล่างกลาง"},
+  {sx:THIRD*2,sy:TOP_H, sw:CW-THIRD*2,sh:BOT_H,label:"⑤ล่างขวา"},
+];
+
+let imgSrc,natW,natH,cx,cy,cs,ds=1,tiles=[];
+
+function loadFile(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    imgSrc=e.target.result;
+    const i=new Image();
+    i.onload=()=>{
+      natW=i.width;natH=i.height;
+      const s=Math.min(natW,natH);
+      cs=s;cx=Math.round((natW-s)/2);cy=Math.round((natH-s)/2);
+      initCrop();
+    };
+    i.src=imgSrc;
+  };
+  r.readAsDataURL(f);
+  inp.value='';
+}
+
+function initCrop(){
+  document.getElementById('cropImg').src=imgSrc;
+  const maxW=Math.min(window.innerWidth-32,440);
+  ds=Math.min(maxW/natW,maxW/natH,1);
+  const w=document.getElementById('cropWrap');
+  w.style.width=Math.round(natW*ds)+'px';
+  w.style.height=Math.round(natH*ds)+'px';
+  document.getElementById('slider').value=Math.round(cs/Math.min(natW,natH)*100);
+  updateUI();
+  show('sCrop');
+  document.getElementById('sub').textContent='ลากกรอบ · ปรับขนาด · กด Confirm';
+}
+
+function updateUI(){
+  const bL=Math.round(cx*ds),bT=Math.round(cy*ds),bS=Math.round(cs*ds);
+  const dW=Math.round(natW*ds),dH=Math.round(natH*ds);
+  const box=document.getElementById('cropBox');
+  box.style.cssText=`left:${bL}px;top:${bT}px;width:${bS}px;height:${bS}px;position:absolute;border:2px solid #f33;pointer-events:none`;
+  sd('dT',0,0,dW,bT);sd('dB',0,bT+bS,dW,Math.max(0,dH-bT-bS));
+  sd('dL',0,bT,bL,bS);sd('dR',bL+bS,bT,Math.max(0,dW-bL-bS),bS);
+  // FB grid lines inside box
+  const tPct=(TOP_H/CH*100).toFixed(1);
+  document.getElementById('hLine').style.cssText=`top:${tPct}%;left:0;width:100%;height:2px`;
+  document.getElementById('v1').style.cssText=`top:0;left:50%;height:${tPct}%;width:2px`;
+  document.getElementById('v2').style.cssText=`top:${tPct}%;left:33.3%;height:${100-parseFloat(tPct)}%;width:2px`;
+  document.getElementById('v3').style.cssText=`top:${tPct}%;left:66.6%;height:${100-parseFloat(tPct)}%;width:2px`;
+  const pct=Math.round(cs/Math.min(natW,natH)*100);
+  document.getElementById('sliderLbl').textContent=`ขนาด: ${pct}% · ${cs}×${cs}px — ลากได้เลย`;
+}
+
+function sd(id,l,t,w,h){
+  const d=document.getElementById(id);
+  d.style.left=l+'px';d.style.top=t+'px';d.style.width=w+'px';d.style.height=Math.max(0,h)+'px';
+}
+
+function onSlider(v){
+  const m=Math.min(natW,natH),s=Math.round(v/100*m);
+  cx=Math.max(0,Math.min(natW-s,cx+Math.round((cs-s)/2)));
+  cy=Math.max(0,Math.min(natH-s,cy+Math.round((cs-s)/2)));
+  cs=s;updateUI();
+}
+
+// Drag
+const cropWrap=document.getElementById('cropWrap');
+cropWrap.addEventListener('mousedown',startDrag);
+cropWrap.addEventListener('touchstart',startDrag,{passive:false});
+
+function startDrag(e){
+  e.preventDefault();
+  const t=e.touches?e.touches[0]:e;
+  const sx=t.clientX,sy2=t.clientY,ox=cx,oy=cy;
+  function mv(e){
+    const t=e.touches?e.touches[0]:e;
+    cx=Math.max(0,Math.min(natW-cs,ox+Math.round((t.clientX-sx)/ds)));
+    cy=Math.max(0,Math.min(natH-cs,oy+Math.round((t.clientY-sy2)/ds)));
+    updateUI();
+  }
+  function up(){
+    window.removeEventListener('mousemove',mv);window.removeEventListener('mouseup',up);
+    window.removeEventListener('touchmove',mv);window.removeEventListener('touchend',up);
+  }
+  window.addEventListener('mousemove',mv);window.addEventListener('mouseup',up);
+  window.addEventListener('touchmove',mv,{passive:false});window.addEventListener('touchend',up);
+}
+
+function cut(){
+  const img=new Image();
+  img.onload=()=>{
+    const src=document.createElement('canvas');
+    src.width=CW;src.height=CH;
+    src.getContext('2d').drawImage(img,cx,cy,cs,cs,0,0,CW,CH);
+    tiles=SLOTS.map(s=>{
+      const size=Math.max(s.sw,s.sh);
+      const padX=Math.round((size-s.sw)/2);
+      const padY=Math.round((size-s.sh)/2);
+      const cvs=document.createElement('canvas');
+      cvs.width=size;cvs.height=size;
+      const c=cvs.getContext('2d');
+      c.fillStyle='#000';c.fillRect(0,0,size,size);
+      c.drawImage(src,s.sx,s.sy,s.sw,s.sh,padX,padY,s.sw,s.sh);
+      return{url:cvs.toDataURL('image/jpeg',.93),label:s.label,size};
+    });
+    renderResult();show('sResult');
+    document.getElementById('sub').textContent='โพสต์ตามลำดับ ①②③④⑤';
+  };
+  img.src=imgSrc;
+}
+
+function renderResult(){
+  // Preview
+  const pt=document.getElementById('prevTop');
+  const pb=document.getElementById('prevBot');
+  pt.innerHTML='';pb.innerHTML='';
+  tiles.slice(0,2).forEach((t,i)=>{
+    const d=document.createElement('div');d.className='preview-cell';d.onclick=()=>dl(t,i);
+    d.innerHTML=`<img src="${t.url}">`;pt.appendChild(d);
+  });
+  tiles.slice(2).forEach((t,i)=>{
+    const d=document.createElement('div');d.className='preview-cell';d.onclick=()=>dl(t,i+2);
+    d.innerHTML=`<img src="${t.url}">`;pb.appendChild(d);
+  });
+  // List
+  const list=document.getElementById('tileList');list.innerHTML='';
+  tiles.forEach((t,i)=>{
+    const d=document.createElement('div');d.className='tile-item';d.onclick=()=>dl(t,i);
+    d.innerHTML=`<img class="tile-thumb" src="${t.url}">
+      <div style="flex:1"><div class="tile-name">${t.label}</div><div class="tile-size">${t.size}×${t.size}px</div></div>
+      <div class="tile-dl">⬇</div>`;
+    list.appendChild(d);
+  });
+}
+
+function dl(t,i){const a=document.createElement('a');a.href=t.url;a.download=`fb_${i+1}_${t.label}.jpg`;a.click();}
+function dlAll(){tiles.forEach((t,i)=>setTimeout(()=>dl(t,i),i*200));}
+
+function show(id){
+  ['sUpload','sCrop','sResult'].forEach(s=>{
+    document.getElementById(s).style.display=s===id?'':'none';
+  });
+}
+function goUpload(){show('sUpload');document.getElementById('sub').textContent='ตัดภาพเดียวเป็น 5 ช่องพอดี FB layout';}
+</script>
+</body>
+</html>
